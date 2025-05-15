@@ -1,4 +1,5 @@
 ﻿
+using System.Diagnostics;
 using System.IO;
 
 namespace UnifiVideoExporter
@@ -14,7 +15,7 @@ namespace UnifiVideoExporter
 
         public Action<double>? ProgressCallback;
         public Action<string,bool>? StatusCallback;
-        public Action<string>? VerboseCallback;
+        public Action<string, TraceLevel>? VerboseCallback;
         public bool _isConnected { get; private set; } = false;
         public string _jobFolder { get; set; } = string.Empty;
 
@@ -39,7 +40,7 @@ namespace UnifiVideoExporter
             _downloadVideoCancellationTokenSource?.Cancel();
             while (_activeTaskCount > 0)
             {
-                VerboseCallback?.Invoke($"Waiting for {_activeTaskCount} tasks to complete...");
+                VerboseCallback?.Invoke($"Waiting for {_activeTaskCount} tasks to complete...", TraceLevel.Info);
                 await Task.Delay(100); // Poll every 100ms
             }
         }
@@ -62,16 +63,16 @@ namespace UnifiVideoExporter
             {
                 await _apiHelper.ConnectAsync(Username, Password);
                 StatusCallback?.Invoke("Connected successfully.",false);
-                VerboseCallback?.Invoke("Connected to UniFi Protect controller.");
+                VerboseCallback?.Invoke("Connected to UniFi Protect controller.", TraceLevel.Info);
                 return true;
             }
             catch (Exception ex)
             {
                 StatusCallback?.Invoke($"Connection failed", true);
-                VerboseCallback?.Invoke($"Connection error: {ex.Message}");
+                VerboseCallback?.Invoke($"Connection error: {ex.Message}", TraceLevel.Error);
                 if (ex.InnerException != null)
                 {
-                    VerboseCallback?.Invoke($"Details: {ex.InnerException.Message}");
+                    VerboseCallback?.Invoke($"Details: {ex.InnerException.Message}", TraceLevel.Error);
                 }
                 _isConnected = false;
                 return false;
@@ -86,7 +87,7 @@ namespace UnifiVideoExporter
         {
             if (!_isConnected)
             {
-                VerboseCallback?.Invoke("Not connected to controller");
+                VerboseCallback?.Invoke("Not connected to controller", TraceLevel.Error);
                 return null;
             }
             Interlocked.Increment(ref _activeTaskCount);
@@ -97,7 +98,7 @@ namespace UnifiVideoExporter
             catch (Exception ex)
             {
                 StatusCallback?.Invoke($"Failed to retrieve camera list", true);
-                VerboseCallback?.Invoke($"Exception retrieving camera list: {ex.Message}");
+                VerboseCallback?.Invoke($"Exception retrieving camera list: {ex.Message}", TraceLevel.Error);
                 return null;
             }
             finally
@@ -110,7 +111,7 @@ namespace UnifiVideoExporter
         {
             if (!_isConnected)
             {
-                VerboseCallback?.Invoke("Not connected to controller");
+                VerboseCallback?.Invoke("Not connected to controller", TraceLevel.Error);
                 return null;
             }
             Interlocked.Increment(ref _activeTaskCount);
@@ -121,12 +122,30 @@ namespace UnifiVideoExporter
             catch (Exception ex)
             {
                 StatusCallback?.Invoke($"Failed to get camera ID", true);
-                VerboseCallback?.Invoke($"Exception retrieving camera ID: {ex.Message}");
+                VerboseCallback?.Invoke($"Exception retrieving camera ID: {ex.Message}", TraceLevel.Error);
                 return null;
             }
             finally
             {
                 Interlocked.Decrement(ref _activeTaskCount);
+            }
+        }
+
+        public void CancelDownload()
+        {
+            if (_downloadVideoCancellationTokenSource != null &&
+                _downloadVideoCancellationTokenSource.Token.CanBeCanceled)
+            {
+                _downloadVideoCancellationTokenSource.Cancel();
+            }
+        }
+
+        public void CancelTimelapseCreation()
+        {
+            if (_createTimelapseCancellationTokenSource != null &&
+                _createTimelapseCancellationTokenSource.Token.CanBeCanceled)
+            {
+                _createTimelapseCancellationTokenSource.Cancel();
             }
         }
 
@@ -142,25 +161,21 @@ namespace UnifiVideoExporter
         {
             if (_isDownloadingVideo)
             {
-                //
-                // This function is re-entrant in the sense that a first invocation starts
-                // a download and a subsequent invocation cancels it.
-                //
-                _downloadVideoCancellationTokenSource?.Cancel();
-                return true;
+                VerboseCallback?.Invoke("Unable to start a download while one is in progress.", TraceLevel.Error);
+                return false;
             }
 
             Interlocked.Increment(ref _activeTaskCount);
             _downloadVideoCancellationTokenSource = new CancellationTokenSource();
             StatusCallback?.Invoke("Downloading...", false);
-            VerboseCallback?.Invoke($"Downloading video(s) from controller...");
+            VerboseCallback?.Invoke($"Downloading video(s) from controller...", TraceLevel.Info);
             _isDownloadingVideo = true;
 
             try
             {
                 var cameraId = await _apiHelper!.GetCameraIdAsync(CameraName);
                 Directory.CreateDirectory(_jobFolder);
-                VerboseCallback?.Invoke($"Using job folder {_jobFolder}");
+                VerboseCallback?.Invoke($"Using job folder {_jobFolder}", TraceLevel.Info);
 
                 //
                 // Process each date in the selected range.
@@ -182,7 +197,7 @@ namespace UnifiVideoExporter
                         endOfDayTime = endOfDayTime.AddDays(1); // Handle time ranges crossing midnight
                     }
 
-                    VerboseCallback?.Invoke($"Processing date {dateStr}...");
+                    VerboseCallback?.Invoke($"Processing date {dateStr}...", TraceLevel.Info);
 
                     while (currentTime < endOfDayTime)
                     {
@@ -195,7 +210,7 @@ namespace UnifiVideoExporter
                         long startMs = (long)(currentTime.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
                         long endMs = (long)(segmentEndTime.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
                         var inputVideoFile = Path.Combine(_jobFolder, $"{dateStr}_{startMs}_{CameraName}.mp4");
-                        VerboseCallback?.Invoke($"Downloading segment for {date:yyyyMMdd} from {currentTime:HH:mm} to {segmentEndTime:HH:mm}");
+                        VerboseCallback?.Invoke($"Downloading segment for {date:yyyyMMdd} from {currentTime:HH:mm} to {segmentEndTime:HH:mm}", TraceLevel.Info);
                         try
                         {
                             await _apiHelper.DownloadVideoAsync(
@@ -218,7 +233,7 @@ namespace UnifiVideoExporter
                             {
                                 throw;
                             }
-                            VerboseCallback?.Invoke($"  ->Segment is corrupt or invalid, skipping.");
+                            VerboseCallback?.Invoke($"  ->Segment is corrupt or invalid, skipping.", TraceLevel.Info);
                             numFailed++;
                         }
 
@@ -234,13 +249,13 @@ namespace UnifiVideoExporter
                                 FfmpegPath,
                                 inputVideoFile,
                                 duration,
-                                Progress => StatusCallback?.Invoke($"Validating video: {Progress:F1}%",false),
+                                Progress => StatusCallback?.Invoke(Progress,false),
                                 VerboseCallback,
                                 _downloadVideoCancellationTokenSource.Token);
                             if (result.Item1 != 0)
                             {
                                 StatusCallback?.Invoke("Validation failed", true);
-                                VerboseCallback?.Invoke($"Video {inputVideoFile} could not be validated: {result.Item2}");
+                                VerboseCallback?.Invoke($"Video {inputVideoFile} could not be validated: {result.Item2}", TraceLevel.Error);
                                 return false;
                             }
                         }
@@ -249,21 +264,21 @@ namespace UnifiVideoExporter
                     }
                 }
 
-                VerboseCallback?.Invoke($"Video(s) downloaded ({numDownloaded} success, {numFailed} failed)");
+                VerboseCallback?.Invoke($"Video(s) downloaded ({numDownloaded} success, {numFailed} failed)", TraceLevel.Info);
                 StatusCallback?.Invoke("Video(s) downloaded.",false);
                 return true;
             }
             catch (OperationCanceledException)
             {
                 StatusCallback?.Invoke($"Operation cancelled", true);
-                VerboseCallback?.Invoke($"Operation cancelled");
+                VerboseCallback?.Invoke($"Operation cancelled", TraceLevel.Info);
                 return false;
             }
             catch (Exception ex)
             {
                 StatusCallback?.Invoke($"Download failed", true);
-                VerboseCallback?.Invoke($"DownloadUnifiVideoAsync: {ex.Message}");
-                VerboseCallback?.Invoke($"Make sure the date range is valid for your controller's storage capacity.");
+                VerboseCallback?.Invoke($"DownloadUnifiVideoAsync: {ex.Message}", TraceLevel.Error);
+                VerboseCallback?.Invoke($"Make sure the date range is valid for your controller's storage capacity.", TraceLevel.Error);
                 return false;
             }
             finally
@@ -286,12 +301,8 @@ namespace UnifiVideoExporter
         {
             if (_isCreatingTimelapse)
             {
-                //
-                // This function is re-entrant in the sense that a first invocation starts
-                // a timelapse and a subsequent invocation cancels it.
-                //
-                _createTimelapseCancellationTokenSource?.Cancel();
-                return true;
+                VerboseCallback?.Invoke("Unable to create a timelapse video while one is in progress.", TraceLevel.Error);
+                return false;
             }
 
             Interlocked.Increment(ref _activeTaskCount);
@@ -299,6 +310,7 @@ namespace UnifiVideoExporter
             _createTimelapseCancellationTokenSource = new CancellationTokenSource();
 
             StatusCallback?.Invoke("Creating timelapse video...", false);
+            VerboseCallback?.Invoke("Creating timelapse video...", TraceLevel.Info);
             var inputVideos = new List<string>();
             string tempFramesDir = string.Empty;
             double duration;
@@ -315,12 +327,12 @@ namespace UnifiVideoExporter
                 var files = videoExtensions.SelectMany(ext => Directory.GetFiles(inputPath, ext)).ToArray();
                 if (files.Length == 0)
                 {
-                    VerboseCallback?.Invoke($"No video files found in path {inputPath}");
+                    VerboseCallback?.Invoke($"No video files found in path {inputPath}", TraceLevel.Error);
                     StatusCallback?.Invoke("No videos found", true);
                     return false;
                 }
                 inputVideos.AddRange(files);
-                VerboseCallback?.Invoke($"Creating timelapse video from {files.Length} video(s) in path {inputPath}...");
+                VerboseCallback?.Invoke($"Creating timelapse video from {files.Length} video(s) in path {inputPath}...", TraceLevel.Info);
                 tempFramesDir = Path.Combine(_jobFolder, "TempFrames");
                 Directory.CreateDirectory(tempFramesDir);
 
@@ -329,7 +341,7 @@ namespace UnifiVideoExporter
                 //
                 foreach (var inputVideo in inputVideos)
                 {
-                    VerboseCallback?.Invoke($"Processing input video {inputVideo}...");
+                    VerboseCallback?.Invoke($"Processing input video {inputVideo}...", TraceLevel.Info);
 
                     //
                     // Determine the video's duration which is needed for frame extraction progress reporting.
@@ -342,10 +354,10 @@ namespace UnifiVideoExporter
                     if (duration == 0)
                     {
                         StatusCallback?.Invoke("Unable to determine video duration", true);
-                        VerboseCallback?.Invoke($"FfmpegGetVideoDurationAsync failed");
+                        VerboseCallback?.Invoke($"FfmpegGetVideoDurationAsync failed", TraceLevel.Error);
                         return false;
                     }
-                    VerboseCallback?.Invoke($"Video duration is {duration:F1}...");
+                    VerboseCallback?.Invoke($"Video duration is {duration:F1}...", TraceLevel.Info);
 
                     //
                     // Extract frames at specified interval and write them to PNGs
@@ -358,13 +370,13 @@ namespace UnifiVideoExporter
                         duration,
                         SnapshotInterval,
                         outputFileNameFormat,
-                        Progress => StatusCallback?.Invoke($"Extracting frames from video: {Progress:F1}%",false),
+                        Progress => StatusCallback?.Invoke(Progress,false),
                         VerboseCallback,
                         _createTimelapseCancellationTokenSource.Token);
                     if (result.Item1 != 0)
                     {
                         StatusCallback?.Invoke("Frame extraction failed", true);
-                        VerboseCallback?.Invoke($"Frame extraction failed:\n{result.Item2}...");
+                        VerboseCallback?.Invoke($"Frame extraction failed:\n{result.Item2}...", TraceLevel.Error);
                         return false;
                     }
                 }
@@ -398,40 +410,40 @@ namespace UnifiVideoExporter
                 if (frameCount == 0)
                 {
                     StatusCallback?.Invoke("No frames found", true);
-                    VerboseCallback?.Invoke($"No frames (PNG files) found in {tempFramesDir}");
+                    VerboseCallback?.Invoke($"No frames (PNG files) found in {tempFramesDir}", TraceLevel.Error);
                     return false;
                 }
                 duration = (double)frameCount / FramesPerSecond;
-                VerboseCallback?.Invoke($"Timelapse video: {frameCount} frames, duration {duration:F1} seconds at {FramesPerSecond} FPS");
+                VerboseCallback?.Invoke($"Timelapse video: {frameCount} frames, duration {duration:F1} seconds at {FramesPerSecond} FPS", TraceLevel.Info);
                 result = await FfmpegWrapper.FfmpegBuildTimelapseVideoAsync(
                     FfmpegPath,
                     inputFileList,
                     outputVideo,
                     duration,
                     FramesPerSecond,
-                    Progress => StatusCallback?.Invoke($"Building timelapse video: {Progress:F1}%",false),
+                    Progress => StatusCallback?.Invoke(Progress,false),
                     VerboseCallback,
                     _createTimelapseCancellationTokenSource.Token);
                 if (result.Item1 != 0)
                 {
                     StatusCallback?.Invoke($"Ffmpeg failed", true);
-                    VerboseCallback?.Invoke(result.Item2);
+                    VerboseCallback?.Invoke(result.Item2, TraceLevel.Error);
                     return false;
                 }
                 StatusCallback?.Invoke("Timelapse created successfully.",false);
-                VerboseCallback?.Invoke($"Timelapse video created at {outputVideo}");
+                VerboseCallback?.Invoke($"Timelapse video created at {outputVideo}", TraceLevel.Info);
                 return true;
             }
             catch (OperationCanceledException)
             {
                 StatusCallback?.Invoke($"Operation cancelled", true);
-                VerboseCallback?.Invoke($"Operation cancelled");
+                VerboseCallback?.Invoke($"Operation cancelled", TraceLevel.Error);
                 return false;
             }
             catch (Exception ex)
             {
                 StatusCallback?.Invoke($"Timelapse creation failed", true);
-                VerboseCallback?.Invoke($"CreateTimelapseAsync: {ex.Message}");
+                VerboseCallback?.Invoke($"CreateTimelapseAsync: {ex.Message}", TraceLevel.Error);
                 return false;
             }
             finally
@@ -447,11 +459,11 @@ namespace UnifiVideoExporter
                         try
                         {
                             Directory.Delete(tempFramesDir, true);
-                            VerboseCallback?.Invoke("Cleaned up temporary frames.");
+                            VerboseCallback?.Invoke("Cleaned up temporary frames.", TraceLevel.Info);
                         }
                         catch (Exception ex)
                         {
-                            VerboseCallback?.Invoke($"Warning: Failed to delete temporary frames: {ex.Message}");
+                            VerboseCallback?.Invoke($"Warning: Failed to delete temporary frames: {ex.Message}", TraceLevel.Warning);
                         }
                     }
                     foreach (var videoFile in inputVideos)
@@ -459,11 +471,11 @@ namespace UnifiVideoExporter
                         try
                         {
                             File.Delete(videoFile);
-                            VerboseCallback?.Invoke($"Cleaned up video file {videoFile}");
+                            VerboseCallback?.Invoke($"Cleaned up video file {videoFile}", TraceLevel.Info);
                         }
                         catch (Exception ex)
                         {
-                            VerboseCallback?.Invoke($"Failed to delete video file {videoFile}: {ex.Message}");
+                            VerboseCallback?.Invoke($"Failed to delete video file {videoFile}: {ex.Message}", TraceLevel.Warning);
                         }
                     }
                 }

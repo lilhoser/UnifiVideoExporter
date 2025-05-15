@@ -5,6 +5,11 @@ using Microsoft.Xaml.Behaviors;
 
 namespace UnifiVideoExporter
 {
+    using TextBox = System.Windows.Controls.TextBox;
+    using CheckBox = System.Windows.Controls.CheckBox;
+    using ListBox = System.Windows.Controls.ListBox;
+    using ComboBox = System.Windows.Controls.ComboBox;
+
     //
     // This BindingHelper is used by CustomErrorTemplate defined in App.xaml during WPF form validation.
     // The template utilizes BindingHelper to extract the full path of the bound property on a control

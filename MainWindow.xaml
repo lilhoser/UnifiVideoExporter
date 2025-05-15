@@ -42,7 +42,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <CheckBox Content="Enable Verbose Logs" 
-                          IsChecked="{Binding EnableVerboseLogs}" 
+                          IsChecked="{Binding Settings.EnableVerboseLogs}" 
                           Margin="0,0,0,0"
                           Grid.Column="0"/>
                 <Button Grid.Column="1" Content="Task scheduler..."
@@ -60,65 +60,64 @@
                       Margin="0,0,0,10"
                       BorderBrush="Red">
                 <StackPanel Margin="5">
-                    <TextBlock Text="UniFi Protect Controller Address:" FontWeight="Bold"/>
-                    <TextBox Margin="0,5" 
-                             Text="{Binding ControllerAddress, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" 
-                             Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                    <TextBlock Text="UniFi Protect Controller Address:" FontWeight="Bold"
+                               Margin="0,5,0,0"/>
+                    <TextBox Text="{Binding Settings.ControllerAddress, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" 
+                             Style="{StaticResource ValidatedControlStyle}"/>
 
-                    <TextBlock Text="Username:" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <TextBox Margin="0,5" 
-                             Text="{Binding Username, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
-                             Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                    <TextBlock Text="Username:" FontWeight="Bold" Margin="0,20,0,0"/>
+                    <TextBox Text="{Binding Settings.UserName, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                             Style="{StaticResource ValidatedControlStyle}"/>
 
-                    <TextBlock Text="Password:" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <PasswordBox x:Name="PasswordBox" Margin="0,5"
+                    <TextBlock Text="Password:" FontWeight="Bold" Margin="0,20,0,0"/>
+                    <PasswordBox x:Name="PasswordBox"
                                  PasswordChanged="PasswordBox_PasswordChanged"
-                                 local:PasswordBoxHelper.BoundPassword="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+                                 local:PasswordBoxHelper.BoundPassword="{Binding Settings.Password, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                                 Style="{StaticResource ValidatedControlStyle}"/>
 
-                    <Grid Margin="0,10,0,0">
+                    <Grid Margin="0,20,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="Connect" Command="{Binding ConnectCommand}"
                                 VerticalContentAlignment="Top"/>
-                        <CheckBox Grid.Column="1" Content="AutoConnect" IsChecked="{Binding AutoConnect}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Column="1" Content="AutoConnect" IsChecked="{Binding Settings.AutoConnect}" Margin="10,0,0,0" VerticalAlignment="Center"/>
                     </Grid>
-
+                    <Separator Margin="0,20,0,0"/>
                     <TextBlock Text="Camera:" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <ComboBox Margin="0,5" 
-                              ItemsSource="{Binding CameraList}" 
-                              SelectedItem="{Binding SelectedCamera,UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
+                    <ComboBox ItemsSource="{Binding CameraList}" 
+                              SelectedItem="{Binding Settings.SelectedCamera,UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
                               IsEnabled="{Binding IsDownloadFormEnabled}"
-                              Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                              Style="{StaticResource ValidatedControlStyle}"/>
 
-                    <TextBlock Text="Date Range:" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5">
-                        <DatePicker SelectedDate="{Binding StartDate,ValidatesOnNotifyDataErrors=True,UpdateSourceTrigger=PropertyChanged}" 
-                                    Margin="0,0,10,0" 
+                    <TextBlock Text="Date Range:" FontWeight="Bold" Margin="0,20,0,0"/>
+                    <StackPanel Orientation="Horizontal">
+                        <DatePicker SelectedDate="{Binding Settings.StartDate,ValidatesOnNotifyDataErrors=True,UpdateSourceTrigger=PropertyChanged}" 
                                     IsEnabled="{Binding IsDownloadFormEnabled}"
-                                    Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
-                        <DatePicker SelectedDate="{Binding EndDate,ValidatesOnNotifyDataErrors=True,UpdateSourceTrigger=PropertyChanged}"
+                                    Style="{StaticResource ValidatedControlStyle}"/>
+                        <TextBlock Margin="5,5">to</TextBlock>
+                        <DatePicker SelectedDate="{Binding Settings.EndDate,ValidatesOnNotifyDataErrors=True,UpdateSourceTrigger=PropertyChanged}"
                                     IsEnabled="{Binding IsDownloadFormEnabled}"
-                                    Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                    Style="{StaticResource ValidatedControlStyle}"/>
                     </StackPanel>
 
-                    <TextBlock Text="Time Range (HH:mm):" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5">
+                    <TextBlock Text="Time Range (HH:mm):" FontWeight="Bold" Margin="0,20,0,0"/>
+                    <StackPanel Orientation="Horizontal">
                         <TextBox Width="60" 
-                                 Text="{Binding StartTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" Margin="0,0,10,0"
+                                 Text="{Binding Settings.StartTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" Margin="0,0,10,0"
                                  IsEnabled="{Binding IsDownloadFormEnabled}"
-                                 Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                 Style="{StaticResource ValidatedControlStyle}"/>
                         <TextBox Width="60" 
-                                 Text="{Binding EndTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
+                                 Text="{Binding Settings.EndTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
                                  IsEnabled="{Binding IsDownloadFormEnabled}"
-                                 Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                 Style="{StaticResource ValidatedControlStyle}"/>
                     </StackPanel>
                     <CheckBox Content="Validate after downloading" 
-                              IsChecked="{Binding ValidateAfterDownloading}" Margin="0,10,0,0"
+                              IsChecked="{Binding Settings.ValidateAfterDownloading}" Margin="0,20,0,0"
                               IsEnabled="{Binding IsDownloadFormEnabled}"/>
                     <CheckBox Content="Send to Timelapse Form When Downloaded" 
-                              IsChecked="{Binding SendToTimelapseForm}" Margin="0,10,0,0"
+                              IsChecked="{Binding Settings.SendToTimelapseForm}" Margin="0,5,0,0"
                               IsEnabled="{Binding IsDownloadFormEnabled}"/>
                     <Button Grid.Column="1" Margin="5,10,0,0" 
                             Content="{Binding IsDownloadingVideo, Converter={StaticResource BooleanToButtonTextConverter},ConverterParameter='DownloadVideoButton'}"
@@ -126,9 +125,9 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Create Timelapse Video" Margin="0,0,0,10"
-                      BorderBrush="Blue" Height="315">
-                <Grid Margin="5">
+            <GroupBox Header="Create Timelapse Video"
+                      BorderBrush="Blue">
+                <Grid Margin="5,0,0,5">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -139,16 +138,16 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
-                        <TextBlock Text="Path to input video(s):" FontWeight="Bold" Margin="0,0,0,0"/>
-                        <Grid Margin="0,5">
+                        <TextBlock Text="Path to input video(s):" FontWeight="Bold" Margin="0,5,0,0"/>
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0"
                                  Grid.Row="0"
-                                 Text="{Binding LocalVideoPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
-                                 Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                 Text="{Binding Settings.LocalVideoPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                                 Style="{StaticResource ValidatedControlStyle}"/>
                             <Button Grid.Column="1" 
                                 Grid.Row="0"
                                 Content="Browse" 
@@ -156,19 +155,19 @@
                                 Click="BrowseLocalVideoPathButton_Click"/>
                         </Grid>
 
-                        <TextBlock Text="FFmpeg Path:" FontWeight="Bold" Margin="0,0,0,0"/>
-                        <Grid Margin="0,5">
+                        <TextBlock Text="FFmpeg Path:" FontWeight="Bold" Margin="0,20,0,0"/>
+                        <Grid Margin="0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0"
-                                 Text="{Binding FfmpegPath, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
-                                 Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                 Text="{Binding Settings.FfmpegPath, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
+                                 Style="{StaticResource ValidatedControlStyle}"/>
                             <Button Grid.Column="1" Content="Browse" Margin="5,0,0,0" Click="BrowseFffmpegButton_Click" />
                         </Grid>
 
-                        <Grid Margin="0,5,0,5">
+                        <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -184,8 +183,8 @@
                                      HorizontalAlignment="Left"
                                      Grid.Column="1"
                                      Width="35"
-                                     Text="{Binding SnapshotInterval, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
-                                     Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                     Text="{Binding Settings.SnapshotInterval, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                                     Style="{StaticResource ValidatedControlStyle}"/>
                             <TextBlock Text="Frames per second (FPS):" FontWeight="Bold" Margin="0,0,0,0"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Left"
@@ -195,17 +194,20 @@
                                      HorizontalAlignment="Left"
                                      Grid.Column="3"
                                      Width="35"
-                                     Text="{Binding FramesPerSecond, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
-                                     Validation.ErrorTemplate="{StaticResource ErrorTemplateBelow}"/>
+                                     Text="{Binding Settings.FramesPerSecond, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                                     Style="{StaticResource ValidatedControlStyle}"/>
                         </Grid>
 
-                        <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Content="Cleanup Input Video(s)" IsChecked="{Binding CleanupVideoFiles}" Margin="0,0,0,0" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="1" Grid.ColumnSpan="2" 
+                                  Content="Cleanup Input Video(s)"
+                                  IsChecked="{Binding Settings.CleanupVideoFiles}" 
+                                  Margin="0,10,0,0"
+                                  VerticalAlignment="Center"/>
                         
                         <Button Content="{Binding IsCreatingTimelapse, Converter={StaticResource BooleanToButtonTextConverter},ConverterParameter='CreateTimelapseButton'}"
-                            Margin="0,10,0,0" 
-                            Command="{Binding CreateTimelapseCommand}" />
-                        
-                        <Button Content="Open" Margin="0,10,0,0" Command="{Binding OpenTimelapseFolderCommand}" />
+                                Margin="0,5,0,0"
+                                Command="{Binding CreateTimelapseCommand}" />
+                        <Button Content="Open" Margin="0,5,0,0" Command="{Binding OpenTimelapseFolderCommand}" />
                     </StackPanel>
                 </Grid>
             </GroupBox>

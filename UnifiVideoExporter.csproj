@@ -3,14 +3,16 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>u_logo.ico</ApplicationIcon>
+    <ApplicationIcon>resources\u_logo.ico</ApplicationIcon>
+    <UseWindowsForms>True</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="u_logo.ico" />
+    <EmbeddedResource Include="resources\u_logo.ico" />
   </ItemGroup>
 
   <ItemGroup>

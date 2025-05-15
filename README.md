@@ -1,5 +1,5 @@
 # UnifiVideoExporter
-<img src="screenshot.png" alt="description" align="left" style="margin-right: 10px;" width="50%" height="50%"> `UnifiVideoExporter` is a simple .NET/WPF application for exporting videos from a UniFi controller (UNVR). The tool also allows you to create a timelapse video from any input video(s), on a schedule if you wish.
+<img src="resources/screenshot.png" alt="description" align="left" style="margin-right: 10px;" width="50%" height="50%"> `UnifiVideoExporter` is a simple .NET/WPF application for exporting videos from a UniFi controller (UNVR). The tool also allows you to create a timelapse video from any input video(s), on a schedule if you wish.
 
 `UnifiVideoExporter` is mainly for archive automation - for example, by providing a date range, you can download a month's worth of video recordings from your UniFi controller and produce a single timelapse video, as a way to archive video content.
 
@@ -9,8 +9,9 @@ This tool uses the same web interface used by the official UniFi Protect web app
 
 # Prerequisites
 Currently, `UnifiVideoExporter` is a Windows-only .NET project for the following reasons:
-* It uses a Windows-specific cryptography library
-* It uses a Windows-specific task scheduler library
+* It uses a Windows-specific **cryptography** library
+* It uses a Windows-specific **task scheduler** library
+* It leverages the Windows Task Scheduler to schedule future timelapse operations
 
 If you want to download videos from a UNVR controller, obviously you must have access to one of those, as well as the Protect app installed on it.  There is no special configuration required to interact with its API/web interface using `UnifiVideoExporter`.
 

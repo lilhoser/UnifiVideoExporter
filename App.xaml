@@ -2,66 +2,40 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UnifiVideoExporter"
-             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-             StartupUri="MainWindow.xaml">
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors">
     <Application.Resources>
         <local:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
-        <local:ErrorMessageConverter x:Key="ErrorMessageConverter"/>
         <local:BooleanToButtonTextConverter x:Key="BooleanToButtonTextConverter"/>
-        <ControlTemplate x:Key="ErrorTemplateRight">
-            <Grid Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" /> <!-- Adorned control -->
-                    <ColumnDefinition Width="Auto" /> <!-- Error message -->
-                </Grid.ColumnDefinitions>
-
-                <!-- Adorned element -->
-                <Border BorderBrush="Red" BorderThickness="1" Grid.Column="0">
-                    <AdornedElementPlaceholder x:Name="AdornerPlaceholder">
-                        <i:Interaction.Behaviors>
-                            <local:BindingPathBehavior />
-                        </i:Interaction.Behaviors>
-                    </AdornedElementPlaceholder>
-                </Border>
-
-                <!-- Error message to the right -->
-                <TextBlock Foreground="Red" Grid.Column="1" MaxWidth="200" TextWrapping="Wrap" TextAlignment="Left" Margin="5,0,0,0">
-                    <TextBlock.Text>
-                        <MultiBinding Converter="{StaticResource ErrorMessageConverter}" UpdateSourceTrigger="PropertyChanged">
-                            <Binding Path="AdornedElement.DataContext" ElementName="AdornerPlaceholder" />
-                            <Binding Path="AdornedElement.(local:BindingHelper.BindingPath)" ElementName="AdornerPlaceholder" />
-                        </MultiBinding>
-                    </TextBlock.Text>
-                </TextBlock>
-                </Grid>
-            </ControlTemplate>
-
-            <ControlTemplate x:Key="ErrorTemplateBelow">
-                <Grid HorizontalAlignment="Left">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" /> <!-- Adorned control -->
-                        <RowDefinition Height="Auto" /> <!-- Error message -->
-                    </Grid.RowDefinitions>
         
-                    <!-- Adorned element -->
-                    <Border BorderBrush="Red" BorderThickness="1" Grid.Row="0">
-                        <AdornedElementPlaceholder x:Name="AdornerPlaceholder">
-                            <i:Interaction.Behaviors>
-                                <local:BindingPathBehavior />
-                            </i:Interaction.Behaviors>
-                        </AdornedElementPlaceholder>
-                    </Border>
-
-                    <!-- Error message below -->
-                    <TextBlock Foreground="Red" Grid.Row="1" MaxWidth="250" TextWrapping="Wrap" TextAlignment="Left" Margin="0,0,0,0" HorizontalAlignment="Left">
-                        <TextBlock.Text>
-                            <MultiBinding Converter="{StaticResource ErrorMessageConverter}" UpdateSourceTrigger="PropertyChanged">
-                                <Binding Path="AdornedElement.DataContext" ElementName="AdornerPlaceholder" />
-                                <Binding Path="AdornedElement.(local:BindingHelper.BindingPath)" ElementName="AdornerPlaceholder" />
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
-                </Grid>
-            </ControlTemplate>
+        <ControlTemplate x:Key="ValidationErrorTemplate">
+        <StackPanel>
+            <AdornedElementPlaceholder x:Name="placeholder"/>
+            <TextBlock Foreground="Red" 
+                       Text="{Binding ElementName=placeholder, Path=AdornedElement.(Validation.Errors).CurrentItem.ErrorContent, 
+                                     FallbackValue=''}" 
+                       x:Name="ErrorText">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="MinHeight" Value="20"/>
+                        <Setter Property="Margin" Value="0,2,0,0"/>
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=placeholder, Path=AdornedElement.(Validation.Errors).Count}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ElementName=placeholder, Path=AdornedElement.(Validation.Errors).Count}" Value="1">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+        </ControlTemplate>
+        
+        <Style x:Key="ValidatedControlStyle">
+            <Setter Property="Validation.ErrorTemplate" Value="{StaticResource ValidationErrorTemplate}"/>
+        </Style>
+        
     </Application.Resources>
 </Application>

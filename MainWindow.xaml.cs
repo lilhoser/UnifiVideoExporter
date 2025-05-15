@@ -4,6 +4,9 @@ using System.Windows.Controls;
 
 namespace UnifiVideoExporter
 {
+    using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+    using Clipboard = System.Windows.Clipboard;
+
     public partial class MainWindow : Window
     {
         public MainWindowViewModel ViewModel { get; }
@@ -13,7 +16,6 @@ namespace UnifiVideoExporter
             InitializeComponent();
             ViewModel = new MainWindowViewModel();
             DataContext = ViewModel;
-            ViewModel.LoadSettings();
         }
 
         private void BrowseFffmpegButton_Click(object sender, RoutedEventArgs e)
@@ -25,7 +27,7 @@ namespace UnifiVideoExporter
             };
             if (dialog.ShowDialog() == true)
             {
-                ViewModel.FfmpegPath = dialog.FileName;
+                ViewModel.Settings.FfmpegPath = dialog.FileName;
             }
         }
 
@@ -33,7 +35,7 @@ namespace UnifiVideoExporter
         {
             if (sender is PasswordBox passwordBox)
             {
-                ViewModel.Password = passwordBox.Password;
+                ViewModel.Settings.Password = passwordBox.Password;
             }
         }
 
@@ -57,7 +59,7 @@ namespace UnifiVideoExporter
             {
                 return;
             }
-            ViewModel.LocalVideoPath = browser.FolderName;
+            ViewModel.Settings.LocalVideoPath = browser.FolderName;
         }
 
         private void LogTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -78,8 +80,8 @@ namespace UnifiVideoExporter
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            ViewModel.SetWindowLoaded();
-            if (ViewModel.AutoConnect && ViewModel.ConnectCommand.CanExecute(null))
+            ViewModel.LoadSettings();
+            if (ViewModel.Settings.AutoConnect && ViewModel.ConnectCommand.CanExecute(null))
             {
                 await ViewModel.ConnectCommand.ExecuteAsync(null);
             }
