@@ -3,6 +3,8 @@ using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Windows;
 
 namespace UnifiVideoExporter
 {
@@ -17,7 +19,7 @@ namespace UnifiVideoExporter
             double SnapshotInterval, 
             string OutputFileNameFormat, 
             Action<string>? StatusCallback,
-            Action<string>? VerboseCallback,
+            Action<string, TraceLevel>? VerboseCallback,
             CancellationToken Token
             )
         {
@@ -37,7 +39,7 @@ namespace UnifiVideoExporter
             double Duration, 
             double FramesPerSecond,
             Action<string>? StatusCallback,
-            Action<string>? VerboseCallback,
+            Action<string, TraceLevel>? VerboseCallback,
             CancellationToken Token
             )
         {
@@ -57,7 +59,7 @@ namespace UnifiVideoExporter
             string VideoFilePath, 
             double Duration, 
             Action<string> StatusCallback,
-            Action<string>? VerboseCallback,
+            Action<string, TraceLevel>? VerboseCallback,
             CancellationToken Token
             )
         {
@@ -73,7 +75,7 @@ namespace UnifiVideoExporter
         internal static async Task<double> FfmpegGetVideoDurationAsync(
             string FfmpegPath,
             string VideoFilePath,
-            Action<string>? VerboseCallback,
+            Action<string, TraceLevel>? VerboseCallback,
             CancellationToken Token
             )
         {
@@ -89,7 +91,6 @@ namespace UnifiVideoExporter
                 ffprobePath,
                 $"-v error -show_entries format=duration -of json \"{VideoFilePath}\"",
                 1, // Dummy duration, as probe is quick
-                null, // No progress needed
                 VerboseCallback,
                 Token);
             if (result.Item1 != 0 || string.IsNullOrEmpty(result.Item2))
@@ -107,39 +108,35 @@ namespace UnifiVideoExporter
         }
 
         private static async Task<(int, string)> FfmpegRunAsync(
-            string FfmpegPath, 
-            string Args, 
-            double Duration, 
+            string FfmpegPath,
+            string Args,
+            double Duration,
             Action<double>? ProgressCallback,
-            Action<string>? VerboseCallback,
-            CancellationToken Token
-            )
+            Action<string, TraceLevel>? VerboseCallback,
+            CancellationToken Token)
         {
-            VerboseCallback?.Invoke($"Executing {FfmpegPath} {Args}");
+            VerboseCallback?.Invoke($"Executing {FfmpegPath} {Args}", TraceLevel.Verbose);
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = FfmpegPath,
-                    Arguments = Args + " -progress pipe:2",
+                    Arguments = Args + " -y -progress -", // important: using `pipe:2` instead of `-` causes hangs in Windows task scheduler
                     UseShellExecute = false,
-                    RedirectStandardOutput = true,
+                    RedirectStandardOutput = false,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 },
                 EnableRaisingEvents = true
             };
-            //
-            // ffmpeg writes diagnostic content to stderr and actual video content to stdout
-            // for progress reporting, we need stderr output
-            //
-            var stderrBuffer = new StringBuilder();
+
             process.ErrorDataReceived += (sender, e) =>
             {
                 if (e.Data != null)
                 {
-                    VerboseCallback?.Invoke(e.Data);
-                    stderrBuffer.AppendLine(e.Data);
+                    VerboseCallback?.Invoke(e.Data, TraceLevel.Verbose);
+
+                    /* NB: This format should be used if we ever change back to " -progress pipe:2"
                     if (e.Data.StartsWith("out_time_ms="))
                     {
                         if (long.TryParse(e.Data.Split('=')[1], out long outTimeMs))
@@ -148,49 +145,33 @@ namespace UnifiVideoExporter
                             ProgressCallback?.Invoke(progress);
                         }
                     }
-                }
-            };
-            process.Start();
-            process.BeginErrorReadLine();
-
-            using (var cts = new CancellationTokenSource())
-            {
-                Token.Register(() =>
-                {
-                    try
+                    */
+                    if (e.Data.Contains("time="))
                     {
-                        if (!process.HasExited)
+                        // Extract time value (e.g., "00:59:00.00")
+                        var timeMatch = Regex.Match(e.Data, @"time=(\d{2}:\d{2}:\d{2}\.\d{2})");
+                        if (timeMatch.Success && TimeSpan.TryParse(timeMatch.Groups[1].Value, out TimeSpan time))
                         {
-                            VerboseCallback?.Invoke($"Killing process...");
-                            process.Kill();
-                            VerboseCallback?.Invoke($"Process killed.");
+                            double outTimeMs = time.TotalMilliseconds;
+                            double progress = Math.Min(outTimeMs / 1000 / Duration * 100, 100);
+                            ProgressCallback?.Invoke(progress);
                         }
                     }
-                    catch (Exception) { }
-                });
+                }
+            };
 
-                return await Task.Run(() =>
-                {
-                    VerboseCallback?.Invoke($"Waiting for process to exit...");
-                    process.WaitForExit();
-                    VerboseCallback?.Invoke($"Process has exited.");
-                    process.CancelErrorRead();
-                    return (process.ExitCode, stderrBuffer.ToString());
-                },
-                Token);
-            }
+            return await RunProcessAsync(process, true, false, VerboseCallback, Token);
         }
 
         private static async Task<(int, string)> FfprobeRunAsync(
             string FfprobePath,
             string Args,
             double Duration,
-            Action<double>? ProgressCallback,
-            Action<string>? VerboseCallback,
+            Action<string, TraceLevel>? VerboseCallback,
             CancellationToken Token
             )
         {
-            VerboseCallback?.Invoke($"Executing {FfprobePath} {Args}");
+            VerboseCallback?.Invoke($"Executing {FfprobePath} {Args}", TraceLevel.Verbose);
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -199,22 +180,49 @@ namespace UnifiVideoExporter
                     Arguments = Args,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    RedirectStandardError = false,
                     CreateNoWindow = true
                 },
                 EnableRaisingEvents = true
             };
-            var stdoutBuffer = new StringBuilder();
             process.OutputDataReceived += (sender, e) =>
             {
                 if (e.Data != null)
                 {
-                    stdoutBuffer.AppendLine(e.Data);
-                    VerboseCallback?.Invoke(e.Data);
+                    VerboseCallback?.Invoke(e.Data, TraceLevel.Verbose);
                 }
             };
-            process.Start();
-            process.BeginOutputReadLine();
+            return await RunProcessAsync(process, false, true, VerboseCallback, Token);
+        }
+
+        private static async Task<(int, string)> RunProcessAsync(
+            Process Process,
+            bool RedirectStderr,
+            bool RedirectStdout,
+            Action<string, TraceLevel>? VerboseCallback,
+            CancellationToken Token
+            )
+        {
+            var stderrBuffer = new StringBuilder();
+            var stdoutBuffer = new StringBuilder();
+
+            Process.Start();
+            if (RedirectStderr)
+            {
+                Process.BeginErrorReadLine();
+                Process.ErrorDataReceived += (s, e) =>
+                {
+                    stderrBuffer.Append(e.Data);
+                };
+            }
+            if (RedirectStdout)
+            {
+                Process.BeginOutputReadLine();
+                Process.OutputDataReceived += (s, e) =>
+                {
+                    stdoutBuffer.Append(e.Data);
+                };
+            }
 
             using (var cts = new CancellationTokenSource())
             {
@@ -222,25 +230,48 @@ namespace UnifiVideoExporter
                 {
                     try
                     {
-                        if (!process.HasExited)
+                        if (!Process.HasExited)
                         {
-                            VerboseCallback?.Invoke($"Killing process...");
-                            process.Kill();
-                            VerboseCallback?.Invoke($"Process killed.");
+                            VerboseCallback?.Invoke($"Killing process...", TraceLevel.Verbose);
+                            Process.Kill();
+                            VerboseCallback?.Invoke($"Process killed.", TraceLevel.Verbose);
                         }
                     }
                     catch (Exception) { }
                 });
 
-                return await Task.Run(() =>
+                var processTask = Task.Run(async () =>
                 {
-                    VerboseCallback?.Invoke($"Waiting for process to exit...");
-                    process.WaitForExit();
-                    VerboseCallback?.Invoke($"Process has exited.");
-                    process.CancelOutputRead();
-                    return (process.ExitCode, stdoutBuffer.ToString());
-                },
-                Token);
+                    VerboseCallback?.Invoke($"Waiting for process to exit...", TraceLevel.Verbose);
+                    await Task.Run(() => Process.WaitForExit(), Token);
+                    VerboseCallback?.Invoke($"Process has exited.", TraceLevel.Verbose);
+                    if (RedirectStderr)
+                    {
+                        Process.CancelErrorRead();
+                    }
+                    if (RedirectStdout)
+                    {
+                        Process.CancelOutputRead();
+                    }
+                    var exitCode = Process.ExitCode;
+                    try
+                    {
+                        Process.Close(); // Explicitly close process resources
+                    }
+                    catch (Exception) { }
+                    if (RedirectStderr)
+                    {
+                        return (exitCode, stderrBuffer.ToString());
+                    }
+                    if (RedirectStdout)
+                    {
+                        return (exitCode, stdoutBuffer.ToString());
+                    }
+                    return (exitCode, string.Empty);
+                }, Token);
+
+                await Task.WhenAny(processTask, Task.Delay(Timeout.Infinite, Token));
+                return await processTask;
             }
         }
     }

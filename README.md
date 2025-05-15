@@ -1,5 +1,5 @@
 # UnifiVideoExporter
-<img src="screenshot.png" alt="description" align="left" style="margin-right: 10px;" width="50%" height="50%"> `UnifiVideoExporter` is a simple .NET/WPF application for exporting videos from a UniFi controller (UNVR). The tool also allows you to create a timelapse video from any input video(s), on a schedule if you wish.
+<img src="resources/screenshot.png" alt="description" align="left" style="margin-right: 10px;" width="50%" height="50%"> `UnifiVideoExporter` is a simple .NET/WPF application for exporting videos from a UniFi controller (UNVR). The tool also allows you to create a timelapse video from any input video(s), on a schedule if you wish.
 
 `UnifiVideoExporter` is mainly for archive automation - for example, by providing a date range, you can download a month's worth of video recordings from your UniFi controller and produce a single timelapse video, as a way to archive video content.
 
@@ -9,8 +9,9 @@ This tool uses the same web interface used by the official UniFi Protect web app
 
 # Prerequisites
 Currently, `UnifiVideoExporter` is a Windows-only .NET project for the following reasons:
-* It uses a Windows-specific cryptography library
-* It uses a Windows-specific task scheduler library
+* It uses a Windows-specific **cryptography** library
+* It uses a Windows-specific **task scheduler** library
+* It leverages the Windows Task Scheduler to schedule future timelapse operations
 
 If you want to download videos from a UNVR controller, obviously you must have access to one of those, as well as the Protect app installed on it.  There is no special configuration required to interact with its API/web interface using `UnifiVideoExporter`.
 
@@ -67,6 +68,15 @@ The timelapse form can be "fed" from the "export a video from unifi controller" 
 ## Task scheduler
 
 _Note_: Windows restricts task scheduler access to administrator accounts only, so you must run `UnifiVideoExporter` as administrator to use this feature.
+
+<img src="resources/screenshot3.png" alt="description" align="right" style="margin-right: 10px;" width="50%" height="50%"> If you would like your backup automation to run on a schedule, click the "Task Scheduler.." button to open the task scheduler form, which will be prepopulated with values from the primary form.
+
+The `Frequency` option specifies how often a timelapse video should be created from the set of videos downloaded from your Unifi controller, as dictated by the video capture time range. The options are:
+* **Daily** - The prior day's videos from the given time range will be downloaded and compressed into a timelapse video. The task will run daily, starting after the specified start date.
+* **Weekly** - The prior week's videos from the given time range will be downloaded and compressed into a timelapse video. The task will run on Sunday, starting after the specified start date.
+* **Monthly** - The prior month's videos from the given time range will be downloaded and compressed into a timelapse video. The task will run on the last day of the month, starting after the specified start date.
+
+If you wish to restrict the video capture to weekdays only, check `Weekdays only`.
 
 # Q&A/Tips
 

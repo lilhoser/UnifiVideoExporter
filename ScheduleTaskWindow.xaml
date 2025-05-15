@@ -6,63 +6,151 @@
         xmlns:local="clr-namespace:UnifiVideoExporter"
         mc:Ignorable="d"
         Title="Schedule Timelapse Task" 
-        Height="650" Width="500"
+        Height="900" Width="500"
         DataContext="{Binding RelativeSource={RelativeSource Self}, Path=ViewModel}">
-    <Grid Margin="10">
+    <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <GroupBox Grid.Row="0" Header="Task Settings">
+        <GroupBox Grid.Row="0" Header="Task Settings" BorderBrush="Black">
             <StackPanel Margin="5">
-                <TextBlock Text="Task Name:" FontWeight="Bold"/>
-                <TextBox Margin="0,5" Text="{Binding TaskName, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="Task Name:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <TextBox Margin="0" 
+                         Text="{Binding CurrentTaskSettings.TaskName, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                         Style="{StaticResource ValidatedControlStyle}" />
+                <TextBlock Text="UniFi Protect Controller Address:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <TextBox Margin="0" 
+                            Text="{Binding CurrentTaskSettings.ControllerAddress, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" 
+                            Style="{StaticResource ValidatedControlStyle}"/>
 
-                <TextBlock Text="Camera:" FontWeight="Bold" Margin="0,10,0,0"/>
-                <ComboBox Margin="0,5" 
+                <TextBlock Text="Username:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <TextBox Margin="0" 
+                            Text="{Binding CurrentTaskSettings.UserName, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                            Style="{StaticResource ValidatedControlStyle}"/>
+
+                <TextBlock Text="Password:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <PasswordBox x:Name="PasswordBox" Margin="0"
+                                PasswordChanged="PasswordBox_PasswordChanged"
+                                local:PasswordBoxHelper.BoundPassword="{Binding CurrentTaskSettings.Password, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                                Style="{StaticResource ValidatedControlStyle}"/>
+                
+                <TextBlock Text="Camera:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <ComboBox Margin="0" 
                           ItemsSource="{Binding CameraList}" 
-                          SelectedItem="{Binding CameraName,UpdateSourceTrigger=PropertyChanged}" />
+                          SelectedItem="{Binding CurrentTaskSettings.SelectedCamera,UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                          Style="{StaticResource ValidatedControlStyle}" />
                 
-                <TextBlock Text="Frequency:" FontWeight="Bold" Margin="0,10,0,0"/>
-                <ComboBox Margin="0,5" 
-                          SelectedItem="{Binding TaskFrequency, UpdateSourceTrigger=PropertyChanged}" 
-                          ItemsSource="{Binding TaskFrequencies}"/>
+                <TextBlock Text="Frequency:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <ComboBox Margin="0" 
+                          SelectedItem="{Binding CurrentTaskSettings.TaskFrequency, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
+                          ItemsSource="{Binding TaskFrequencies}"
+                          Style="{StaticResource ValidatedControlStyle}" />
 
-                <TextBlock Text="Starting on:" FontWeight="Bold" Margin="0,10,0,0"/>
-                <DatePicker SelectedDate="{Binding StartDate}"/>
-
-                <CheckBox Content="Weekdays Only" IsChecked="{Binding WeekdaysOnly}" Margin="0,10,0,0"/>
-                
-                <TextBlock Text="Video capture time range (HH:mm):" FontWeight="Bold" Margin="0,10,0,0"/>
-                <StackPanel Orientation="Horizontal" Margin="0,5">
-                    <TextBox Width="60" 
-                             Text="{Binding StartTime, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
-                    <TextBox Width="60" 
-                             Text="{Binding EndTime, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="Starting on:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <Grid Margin="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <DatePicker SelectedDate="{Binding CurrentTaskSettings.StartDate,ValidatesOnNotifyDataErrors=True}"
+                            Style="{StaticResource ValidatedControlStyle}" 
+                            Width="125"
+                            Grid.Row="0"
+                            Grid.Column="0"/>
+                <TextBlock Text="at"
+                           Margin="5,2,5,0"
+                           Grid.Row="0"
+                           Grid.Column="1"/>
+                <TextBox Grid.Column="2"
+                         Grid.Row="0"
+                         Width="45"
+                         Text="{Binding CurrentTaskSettings.TaskStartTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                         Style="{StaticResource ValidatedControlStyle}" />
+                </Grid>
+                                
+                <TextBlock Text="Video capture time range (HH:mm):" FontWeight="Bold" Margin="0,20,0,0"/>
+                <StackPanel Orientation="Horizontal" >
+                    <TextBox Width="45" 
+                             Text="{Binding CurrentTaskSettings.StartTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" Margin="0,0,10,0"
+                             Style="{StaticResource ValidatedControlStyle}" />
+                    <TextBox Width="45" 
+                             Text="{Binding CurrentTaskSettings.EndTime, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                             Style="{StaticResource ValidatedControlStyle}" />
                 </StackPanel>
+                <CheckBox Content="Weekdays Only" IsChecked="{Binding CurrentTaskSettings.WeekdaysOnly}" Margin="0,5"/>
                 
-                <TextBlock Text="Output video location:" FontWeight="Bold" Margin="0,0,0,0"/>
-                <Grid Margin="0,5">
+                <TextBlock Text="Output video location:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <Grid Margin="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0"
-                         Grid.Row="0"
-                         Text="{Binding OutputVideoLocation, UpdateSourceTrigger=PropertyChanged}"/>
+                             Grid.Row="0"
+                             Text="{Binding CurrentTaskSettings.OutputVideoLocation, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                             Style="{StaticResource ValidatedControlStyle}" />
                     <Button Grid.Column="1" 
                         Grid.Row="0"
                         Content="Browse" 
                         Margin="5,0,0,0" 
                         Click="BrowseOutputVideoLocationButton_Click"/>
                 </Grid>
+                
+                <TextBlock Text="FFmpeg Path:" FontWeight="Bold" Margin="0,20,0,0"/>
+                <Grid Margin="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                         Text="{Binding CurrentTaskSettings.FfmpegPath, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}" 
+                         Style="{StaticResource ValidatedControlStyle}"/>
+                    <Button Grid.Column="1" Content="Browse" Margin="5,0,0,0" Click="BrowseFffmpegButton_Click" />
+                </Grid>
+                
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Snapshot Interval (seconds):" FontWeight="Bold" Margin="0,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Grid.Column="0"/>
+                    <TextBox Margin="5,5"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Left"
+                             Grid.Column="1"
+                             Width="35"
+                             Text="{Binding CurrentTaskSettings.SnapshotInterval, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                             Style="{StaticResource ValidatedControlStyle}"/>
+                    <TextBlock Text="Frames per second (FPS):" FontWeight="Bold" Margin="0,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Grid.Column="2"/>
+                    <TextBox Margin="5,5"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Left"
+                             Grid.Column="3"
+                             Width="35"
+                             Text="{Binding CurrentTaskSettings.FramesPerSecond, UpdateSourceTrigger=PropertyChanged,ValidatesOnNotifyDataErrors=True}"
+                             Style="{StaticResource ValidatedControlStyle}"/>
+                </Grid>
+                
+                <Button Content="Create Task" Command="{Binding CreateTaskCommand}" Margin="0,20,0,0"/>
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="1" Header="Existing Tasks" Margin="0,10,0,0">
-            <ListView ItemsSource="{Binding ExistingTasks}" Margin="5">
+        <GroupBox Grid.Row="1" Header="Existing Tasks" Margin="0,10,0,0" BorderBrush="Black">
+            <ListView ItemsSource="{Binding ExistingTasks}" Margin="5"
+                      Name="ExistingTasksListview"
+                      SelectionChanged="ExistingTasksListview_SelectionChanged">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Header="Task Name" Width="200" DisplayMemberBinding="{Binding TaskName}"/>
@@ -78,10 +166,5 @@
                 </ListView.View>
             </ListView>
         </GroupBox>
-
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
-            <Button Content="Create Task" Command="{Binding CreateTaskCommand}" Margin="0,0,10,0"/>
-            <Button Content="Cancel" Click="CancelButton_Click"/>
-        </StackPanel>
     </Grid>
 </Window>

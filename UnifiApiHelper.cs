@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.Collections;
 using System.IO;
+using System.Diagnostics;
 
 namespace UnifiVideoExporter
 {
@@ -21,7 +22,7 @@ namespace UnifiVideoExporter
         private readonly string _controllerAddress = string.Empty;
 
         public Action<string, bool>? StatusCallback;
-        public Action<string>? VerboseCallback;
+        public Action<string, TraceLevel>? VerboseCallback;
 
         public UnifiApiHelper(string ControllerAddress)
         {
@@ -66,11 +67,11 @@ namespace UnifiVideoExporter
             request.Headers.Add("Accept", "application/json");
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
-            VerboseCallback?.Invoke($"Authentication response: Status {response.StatusCode}, Body: {responseBody}\n");
-            VerboseCallback?.Invoke("Response headers:\n");
+            VerboseCallback?.Invoke($"Authentication response: Status {response.StatusCode}, Body: {responseBody}", TraceLevel.Verbose);
+            VerboseCallback?.Invoke("Response headers:", TraceLevel.Verbose);
             foreach (var header in response.Headers)
             {
-                VerboseCallback?.Invoke($"{header.Key}: {string.Join(", ", header.Value)}\n");
+                VerboseCallback?.Invoke($"{header.Key}: {string.Join(", ", header.Value)}", TraceLevel.Verbose);
             }
 
             if (!response.IsSuccessStatusCode)
@@ -99,7 +100,7 @@ namespace UnifiVideoExporter
                         if (match.Success)
                         {
                             sessionToken = match.Groups[1].Value;
-                            VerboseCallback?.Invoke($"Found session token in Set-Cookie: TOKEN={sessionToken}\n");
+                            VerboseCallback?.Invoke($"Found session token in Set-Cookie: TOKEN={sessionToken}", TraceLevel.Verbose);
                             break;
                         }
                     }
@@ -111,7 +112,7 @@ namespace UnifiVideoExporter
                 //
                 // Cookie-based authentication; HttpClient will handle cookies automatically
                 //
-                VerboseCallback?.Invoke("Using cookie-based authentication (no Authorization header set).\n");
+                VerboseCallback?.Invoke("Using cookie-based authentication (no Authorization header set).", TraceLevel.Verbose);
             }
             else
             {
@@ -119,7 +120,7 @@ namespace UnifiVideoExporter
                 // JWT-based authentication
                 //
                 _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _authToken);
-                VerboseCallback?.Invoke("Using JWT-based authentication with Bearer token.\n");
+                VerboseCallback?.Invoke("Using JWT-based authentication with Bearer token.", TraceLevel.Verbose);
             }
             _authenticated = true;
         }

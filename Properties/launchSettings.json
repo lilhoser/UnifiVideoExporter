@@ -1,0 +1,15 @@
+{
+    "profiles": {
+        "UnifiVideoExporter-task-cli": {
+            "commandName": "Project",
+            "commandLineArgs": "--settings \"C:\\Users\\lilhoser\\AppData\\Roaming\\UnifiVideoExporter\\tasks\\ac45c36d-3741-4855-bca6-202bae640908.json\" --scheduledtask"
+        },
+        "UnifiVideoExporter-cli": {
+            "commandName": "Project",
+            "commandLineArgs": "--settings \"C:\\Users\\lilhoser\\AppData\\Roaming\\UnifiVideoExporter\\tasks\\346db33e-4b0e-4656-a652-7d7c72878f3e.json\""
+        },
+        "UnifiVideoExporter": {
+            "commandName": "Project"
+        }
+    }
+}
