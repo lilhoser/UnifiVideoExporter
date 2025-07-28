@@ -213,48 +213,64 @@ namespace UnifiVideoExporter
                         long endMs = (long)(segmentEndTime.ToUniversalTime() - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
                         var targetVideoFile = Path.Combine(_jobFolder, $"{dateStr}_{startMs}_{CameraName}.mp4");
                         VerboseCallback?.Invoke($"Downloading segment for {date:yyyyMMdd} from {currentTime:HH:mm} to {segmentEndTime:HH:mm}", TraceLevel.Info);
-                        try
+
+                        bool downloaded = false;
+                        for (int retries = 1; retries <= 4; retries++)
                         {
-                            await _apiHelper.DownloadVideoAsync(
-                                cameraId,
-                                startMs,
-                                endMs,
-                                targetVideoFile,
-                                _downloadVideoCancellationTokenSource.Token);
-                            numDownloaded++;
-                        }
-                        catch (HttpRequestException ex2)
-                        {
-                            if (ex2.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                            try
                             {
-                                //
-                                // Typically this means the requested date range is invalid,
-                                // for example, there is no video for that date.
-                                //
-                                VerboseCallback?.Invoke($"HTTP request failed for this segment", TraceLevel.Warning);
-                                numFailed++;
-                                currentTime = segmentEndTime;
-                                continue;
+                                await _apiHelper.DownloadVideoAsync(
+                                    cameraId,
+                                    startMs,
+                                    endMs,
+                                    targetVideoFile,
+                                    _downloadVideoCancellationTokenSource.Token);
+                                numDownloaded++;
+                                downloaded = true;
+                                break;
                             }
-                            throw;
-                        }
-                        catch (OperationCanceledException ex3)
-                        {
-                            //
-                            // UniFi controller will abruptly cancel a download request if there is a problem
-                            // with the recording; eg, the camera was offline. In these cases, we'll swallow
-                            // the exception and continue on to the next segment. If the cancellation was from
-                            // a user request, stop now.
-                            //
-                            if (ex3.CancellationToken == _downloadVideoCancellationTokenSource.Token)
+                            catch (UnifiVideoDownloadTimeoutException)
                             {
+                                VerboseCallback?.Invoke($"Download timed out, retrying (#{retries} of 4)", TraceLevel.Warning);
+                            }
+                            catch (HttpRequestException ex2)
+                            {
+                                if (ex2.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                                {
+                                    //
+                                    // Typically this means the requested date range is invalid,
+                                    // for example, there is no video for that date.
+                                    //
+                                    VerboseCallback?.Invoke($"HTTP request failed for this segment", TraceLevel.Warning);
+                                    numFailed++;
+                                    currentTime = segmentEndTime;
+                                    break;
+                                }
                                 throw;
                             }
-                            VerboseCallback?.Invoke($"  ->Segment is corrupt or invalid, skipping.", TraceLevel.Info);
-                            numFailed++;
+                            catch (OperationCanceledException ex3)
+                            {
+                                //
+                                // UniFi controller will abruptly cancel a download request if there is a problem
+                                // with the recording; eg, the camera was offline. In these cases, we'll swallow
+                                // the exception and continue on to the next segment. If the cancellation was from
+                                // a user request, stop now.
+                                //
+                                if (ex3.CancellationToken == _downloadVideoCancellationTokenSource.Token)
+                                {
+                                    throw;
+                                }
+                                VerboseCallback?.Invoke($"  ->Segment is corrupt or invalid, skipping.", TraceLevel.Info);
+                                numFailed++;
+                            }
+
+                            _downloadVideoCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         }
 
-                        _downloadVideoCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        if (!downloaded)
+                        {
+                            continue;
+                        }
 
                         //
                         // For validation, duration is a function of the video length.

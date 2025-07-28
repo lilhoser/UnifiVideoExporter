@@ -1,5 +1,4 @@
-﻿
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Net.Security;
@@ -11,6 +10,18 @@ using System.Diagnostics;
 
 namespace UnifiVideoExporter
 {
+    internal class UnifiVideoDownloadTimeoutException : Exception
+    {
+        public UnifiVideoDownloadTimeoutException()
+        {
+        }
+
+        public UnifiVideoDownloadTimeoutException(string message)
+            : base(message)
+        {
+        }
+    }
+
     internal class UnifiApiHelper
     {
         private readonly HttpClient _httpClient;
@@ -175,7 +186,8 @@ namespace UnifiVideoExporter
             long StartMs,
             long EndMs,
             string TargetOutputLocation,
-            CancellationToken Token
+            CancellationToken Token,
+            int DownloadTimeoutSec = 30
             )
         {
             if (!_authenticated)
@@ -205,20 +217,41 @@ namespace UnifiVideoExporter
                 using (var stream = await response.Content.ReadAsStreamAsync(Token))
                 using (var fileStream = new FileStream(TargetOutputLocation, FileMode.Create, FileAccess.Write))
                 {
-                    byte[] buffer = new byte[33554432]; //32mb
-                    int bytesRead;
+                    byte[] buffer = new byte[4 * 1024 * 1024]; // 4MB
                     long totalBytes = 0;
                     long? contentLength = response.Content.Headers.ContentLength;
                     double lastProgress = -1;
-                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, Token)) > 0)
+
+                    while (true)
                     {
+                        int bytesRead = 0;
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Token);
+                        cts.CancelAfter(TimeSpan.FromSeconds(DownloadTimeoutSec));
+                        try
+                        {
+                            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            if (cts.IsCancellationRequested)
+                            {
+                                var msg = "ReadAsync timed out after 30 seconds. Aborting download.";
+                                StatusCallback?.Invoke(msg, true);
+                                throw new UnifiVideoDownloadTimeoutException(msg);
+                            }
+                            throw; // user cancelled
+                        }
+
+                        if (bytesRead <= 0)
+                            break;
+
                         await fileStream.WriteAsync(buffer, 0, bytesRead, Token);
                         totalBytes += bytesRead;
 
                         if (contentLength.HasValue)
                         {
                             double progress = (double)totalBytes / contentLength.Value * 100;
-                            if (progress - lastProgress >= 1) // Update every 1% progress
+                            if (progress - lastProgress >= 1)
                             {
                                 StatusCallback?.Invoke(
                                     $"Downloading video: {progress:F1}% ({totalBytes / (1024 * 1024)} MB of {contentLength.Value / (1024 * 1024)} MB)",
