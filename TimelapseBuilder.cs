@@ -235,7 +235,8 @@ namespace UnifiVideoExporter
                             }
                             catch (HttpRequestException ex2)
                             {
-                                if (ex2.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                                if (ex2.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+                                    ex2.StatusCode == System.Net.HttpStatusCode.NotFound)
                                 {
                                     //
                                     // Typically this means the requested date range is invalid,
