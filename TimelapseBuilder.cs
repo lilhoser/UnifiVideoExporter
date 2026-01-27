@@ -263,6 +263,8 @@ namespace UnifiVideoExporter
                                 }
                                 VerboseCallback?.Invoke($"  ->Segment is corrupt or invalid, skipping.", TraceLevel.Info);
                                 numFailed++;
+                                currentTime = segmentEndTime;
+                                break;
                             }
 
                             _downloadVideoCancellationTokenSource.Token.ThrowIfCancellationRequested();
